@@ -154,9 +154,9 @@ class SoundRecordNotifier extends ChangeNotifier {
         recordMp3 = AudioRecorder();
         safeNotify();
       });
-      safeNotify();
+      notifyListeners();
     }
-    safeNotify();
+    notifyListeners();
   }
 
   String _getSoundExtention() {
@@ -214,12 +214,12 @@ class SoundRecordNotifier extends ChangeNotifier {
         isLocked = true;
         lockScreenRecord = true;
         hightValue = 50;
-        safeNotify();
+        notifyListeners();
       }
       if (hightValue < 0) hightValue = 0;
       heightPosition = hightValue;
       lockScreenRecord = isLocked;
-      safeNotify();
+      notifyListeners();
 
       /// this operation for update X oriantation
       /// draggable to the left or right place
@@ -249,7 +249,7 @@ class SoundRecordNotifier extends ChangeNotifier {
         }
         // ignore: empty_catches
       } catch (e) {}
-      safeNotify();
+      notifyListeners();
     }
   }
 
@@ -276,9 +276,9 @@ class SoundRecordNotifier extends ChangeNotifier {
       minute = minute + 1;
     }
 
-    safeNotify();
+    notifyListeners();
     loopActive = false;
-    safeNotify();
+    notifyListeners();
   }
 
   /// this function to start record voice
@@ -303,9 +303,9 @@ class SoundRecordNotifier extends ChangeNotifier {
       }
 
       _mapCounterGenerater();
-      safeNotify();
+      notifyListeners();
     }
-    safeNotify();
+    notifyListeners();
   }
 
   /// to check permission
