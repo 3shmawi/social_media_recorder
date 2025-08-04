@@ -110,7 +110,7 @@ class SoundRecordNotifier extends ChangeNotifier {
 
   /// To increase counter after 1 sencond
   void _mapCounterGenerater() {
-    _timerCounter = Timer(const Duration(seconds: 0), () {
+    _timerCounter = Timer(const Duration(seconds: 1), () {
       _increaseCounterWhilePressed();
       if (buttonPressed) _mapCounterGenerater();
     });
@@ -154,9 +154,9 @@ class SoundRecordNotifier extends ChangeNotifier {
         recordMp3 = AudioRecorder();
         safeNotify();
       });
-      notifyListeners();
+      safeNotify();
     }
-    notifyListeners();
+    safeNotify();
   }
 
   String _getSoundExtention() {
