@@ -116,25 +116,41 @@ class SoundRecordNotifier extends ChangeNotifier {
     });
   }
 
-  finishRecording() {
+  finishRecording() async {
     if (buttonPressed) {
-      if (second > 1 || minute > 0) {
-        String path = mPath;
-        String _time = minute.toString() + ":" + second.toString();
-        sendRequestFunction(File.fromUri(Uri(path: path)), _time);
-        stopRecording!(_time);
+      String _time = minute.toString() + ":" + second.toString();
+      try {
+        if (second > 0 || minute > 0) {
+          String path = mPath;
+          sendRequestFunction(File.fromUri(Uri(path: path)), _time);
+        }
+      } catch (e) {
+        // Handle any errors during file processing
+        print('Error processing recording: $e');
+      } finally {
+        // Always call stopRecording callback regardless of duration or success
+        if (stopRecording != null) {
+          stopRecording!(_time);
+        }
       }
     }
-    resetEdgePadding();
+    await resetEdgePadding();
   }
 
   /// used to reset all value to initial value when end the record
   resetEdgePadding() async {
-    if (_initWidth == -33) {
-      RenderBox box = key.currentContext?.findRenderObject() as RenderBox;
-      Offset position = box.localToGlobal(Offset.zero);
-      _initWidth = position.dx;
+    try {
+      if (_initWidth == -33) {
+        RenderBox box = key.currentContext?.findRenderObject() as RenderBox;
+        Offset position = box.localToGlobal(Offset.zero);
+        _initWidth = position.dx;
+      }
+    } catch (e) {
+      // Handle render box context errors gracefully
+      print('Error getting render box position: $e');
     }
+
+    // Reset all state variables - these should always be reset regardless of errors
     _localCounterForMaxRecordTime = 0;
     isLocked = false;
     edge = 0;
@@ -145,18 +161,29 @@ class SoundRecordNotifier extends ChangeNotifier {
     key = GlobalKey();
     heightPosition = 0;
     lockScreenRecord = false;
-    if (_timer != null) _timer!.cancel();
-    if (_timerCounter != null) _timerCounter!.cancel();
-    final value = await recordMp3.isRecording();
 
-    if (value == true) {
-      recordMp3.stop().then((x) {
+    // Cancel timers safely
+    try {
+      if (_timer != null) _timer!.cancel();
+      if (_timerCounter != null) _timerCounter!.cancel();
+    } catch (e) {
+      print('Error cancelling timers: $e');
+    }
+
+    // Stop recording safely
+    try {
+      final value = await recordMp3.isRecording();
+      if (value == true) {
+        await recordMp3.stop();
         recordMp3 = AudioRecorder();
-        safeNotify();
-      });
+      }
+    } catch (e) {
+      print('Error stopping recording: $e');
+      // Create new recorder instance even if stop failed
+      recordMp3 = AudioRecorder();
+    } finally {
       safeNotify();
     }
-    safeNotify();
   }
 
   String _getSoundExtention() {
@@ -228,8 +255,13 @@ class SoundRecordNotifier extends ChangeNotifier {
         Offset position = box.localToGlobal(Offset.zero);
         if (position.dx <= MediaQuery.of(context).size.width * 0.6) {
           String _time = minute.toString() + ":" + second.toString();
-          if (stopRecording != null) stopRecording!(_time);
-          resetEdgePadding();
+          try {
+            if (stopRecording != null) stopRecording!(_time);
+          } catch (e) {
+            print('Error in stopRecording callback: $e');
+          } finally {
+            resetEdgePadding();
+          }
         } else if (x.dx >= MediaQuery.of(context).size.width) {
           edge = 0;
           edge = 0;

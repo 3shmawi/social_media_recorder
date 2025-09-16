@@ -47,16 +47,16 @@ class SoundRecorderWhenLockedDesign extends StatelessWidget {
         ),
       ),
       child: InkWell(
-        onTap: () {
+        onTap: () async {
           soundRecordNotifier.isShow = false;
-          soundRecordNotifier.resetEdgePadding();
+          await soundRecordNotifier.resetEdgePadding();
         },
         child: Row(
           children: [
             InkWell(
               onTap: () async {
                 soundRecordNotifier.isShow = false;
-                soundRecordNotifier.finishRecording();
+                await soundRecordNotifier.finishRecording();
               },
               child: Transform.scale(
                 scale: 1.2,
@@ -71,15 +71,17 @@ class SoundRecorderWhenLockedDesign extends StatelessWidget {
                       color: recordIconWhenLockBackGroundColor,
                       child: Padding(
                         padding: const EdgeInsets.all(4.0),
-                        child: recordIconWhenLockedRecord ??
+                        child:
+                            recordIconWhenLockedRecord ??
                             sendButtonIcon ??
                             Icon(
                               Icons.send,
                               textDirection: TextDirection.ltr,
                               size: 28,
-                              color: (soundRecordNotifier.buttonPressed)
-                                  ? Colors.grey.shade200
-                                  : Colors.black,
+                              color:
+                                  (soundRecordNotifier.buttonPressed)
+                                      ? Colors.grey.shade200
+                                      : Colors.black,
                             ),
                       ),
                     ),
@@ -89,27 +91,33 @@ class SoundRecorderWhenLockedDesign extends StatelessWidget {
             ),
             Expanded(
               child: InkWell(
-                  onTap: () {
-                    soundRecordNotifier.isShow = false;
-                    String _time = soundRecordNotifier.minute.toString() +
-                        ":" +
-                        soundRecordNotifier.second.toString();
+                onTap: () async {
+                  soundRecordNotifier.isShow = false;
+                  String _time =
+                      soundRecordNotifier.minute.toString() +
+                      ":" +
+                      soundRecordNotifier.second.toString();
+                  try {
+                    // Always call stopRecording callback when canceling
                     if (stopRecording != null) stopRecording!(_time);
-                    soundRecordNotifier.resetEdgePadding();
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      cancelText ?? "",
-                      maxLines: 1,
-                      textAlign: TextAlign.center,
-                      overflow: TextOverflow.clip,
-                      style: cancelTextStyle ??
-                          const TextStyle(
-                            color: Colors.black,
-                          ),
-                    ),
-                  )),
+                  } catch (e) {
+                    print('Error in stopRecording callback: $e');
+                  } finally {
+                    await soundRecordNotifier.resetEdgePadding();
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    cancelText ?? "",
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.clip,
+                    style:
+                        cancelTextStyle ?? const TextStyle(color: Colors.black),
+                  ),
+                ),
+              ),
             ),
             ShowCounter(
               soundRecorderState: soundRecordNotifier,

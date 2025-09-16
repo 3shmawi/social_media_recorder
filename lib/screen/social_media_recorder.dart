@@ -145,15 +145,18 @@ class _SocialMediaRecorder extends State<SocialMediaRecorder> {
     soundRecordNotifier.stopRecording = widget.stopRecording ?? (String x) {};
     soundRecordNotifier.sendRequestFunction = widget.sendRequestFunction;
     return MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (context) => soundRecordNotifier),
-        ],
-        child: Consumer<SoundRecordNotifier>(
-          builder: (context, value, _) {
-            return Directionality(
-                textDirection: TextDirection.rtl, child: makeBody(value));
-          },
-        ));
+      providers: [
+        ChangeNotifierProvider(create: (context) => soundRecordNotifier),
+      ],
+      child: Consumer<SoundRecordNotifier>(
+        builder: (context, value, _) {
+          return Directionality(
+            textDirection: TextDirection.rtl,
+            child: makeBody(value),
+          );
+        },
+      ),
+    );
   }
 
   Widget makeBody(SoundRecordNotifier state) {
@@ -163,8 +166,10 @@ class _SocialMediaRecorder extends State<SocialMediaRecorder> {
           onHorizontalDragUpdate: (scrollEnd) {
             state.updateScrollValue(scrollEnd.globalPosition, context);
           },
-          onHorizontalDragEnd: (x) {
-            if (state.buttonPressed && !state.isLocked) state.finishRecording();
+          onHorizontalDragEnd: (x) async {
+            if (state.buttonPressed && !state.isLocked) {
+              await state.finishRecording();
+            }
           },
           child: Container(
             decoration: const BoxDecoration(
@@ -175,7 +180,7 @@ class _SocialMediaRecorder extends State<SocialMediaRecorder> {
             ),
             child: recordVoice(state),
           ),
-        )
+        ),
       ],
     );
   }
@@ -210,15 +215,16 @@ class _SocialMediaRecorder extends State<SocialMediaRecorder> {
       },
       onPointerUp: (details) async {
         if (!state.isLocked) {
-          state.finishRecording();
+          await state.finishRecording();
         }
       },
       child: AnimatedContainer(
         duration: Duration(milliseconds: soundRecordNotifier.isShow ? 0 : 300),
         height: widget.fullRecordPackageHeight,
-        width: (soundRecordNotifier.isShow)
-            ? MediaQuery.of(context).size.width
-            : widget.initRecordPackageWidth,
+        width:
+            (soundRecordNotifier.isShow)
+                ? MediaQuery.of(context).size.width
+                : widget.initRecordPackageWidth,
         child: Stack(
           children: [
             Center(
@@ -226,9 +232,11 @@ class _SocialMediaRecorder extends State<SocialMediaRecorder> {
                 padding: EdgeInsets.only(right: state.edge),
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius: soundRecordNotifier.isShow
-                        ? BorderRadius.circular(12)
-                        : widget.radius != null && !soundRecordNotifier.isShow
+                    borderRadius:
+                        soundRecordNotifier.isShow
+                            ? BorderRadius.circular(12)
+                            : widget.radius != null &&
+                                !soundRecordNotifier.isShow
                             ? widget.radius
                             : BorderRadius.circular(0),
                     color: widget.backGroundColor ?? Colors.grey.shade100,
@@ -252,11 +260,12 @@ class _SocialMediaRecorder extends State<SocialMediaRecorder> {
                       if (soundRecordNotifier.isShow)
                         Center(
                           child: ShowCounter(
-                              counterBackGroundColor:
-                                  widget.counterBackGroundColor,
-                              soundRecorderState: state,
-                              fullRecordPackageHeight:
-                                  widget.fullRecordPackageHeight),
+                            counterBackGroundColor:
+                                widget.counterBackGroundColor,
+                            soundRecorderState: state,
+                            fullRecordPackageHeight:
+                                widget.fullRecordPackageHeight,
+                          ),
                         ),
                     ],
                   ),
@@ -269,7 +278,7 @@ class _SocialMediaRecorder extends State<SocialMediaRecorder> {
                 soundRecorderState: state,
                 lockIcon: widget.lockButton,
               ),
-            )
+            ),
           ],
         ),
       ),
