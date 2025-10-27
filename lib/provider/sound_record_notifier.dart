@@ -18,11 +18,45 @@ class SoundRecordNotifier extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
+
+    // Cancel all timers to prevent callbacks after disposal
+    try {
+      _timer?.cancel();
+      _timerCounter?.cancel();
+    } catch (e) {
+      print('Error cancelling timers in dispose: $e');
+    }
+
+    // Stop recording if active
+    try {
+      recordMp3.stop();
+    } catch (e) {
+      print('Error stopping recording in dispose: $e');
+    }
+
     super.dispose();
   }
 
   void safeNotify() {
-    if (!_isDisposed) notifyListeners();
+    if (!_isDisposed) {
+      try {
+        notifyListeners();
+      } catch (e) {
+        // Handle potential notification errors gracefully
+        print('Error in notifyListeners: $e');
+      }
+    }
+  }
+
+  /// Immediate notification for critical UI updates (like user interactions)
+  void immediateNotify() {
+    if (!_isDisposed) {
+      try {
+        notifyListeners();
+      } catch (e) {
+        print('Error in immediateNotify: $e');
+      }
+    }
   }
 
   /// This Timer Just For wait about 1 second until starting record
@@ -105,7 +139,8 @@ class SoundRecordNotifier extends ChangeNotifier {
     this.encode = AudioEncoderType.AAC,
     this.maxRecordTime,
   }) {
-    record(() {});
+    // Initialize permissions but don't start recording automatically
+    voidInitialSound();
   }
 
   /// To increase counter after 1 sencond
@@ -241,12 +276,12 @@ class SoundRecordNotifier extends ChangeNotifier {
         isLocked = true;
         lockScreenRecord = true;
         hightValue = 50;
-        notifyListeners();
+        immediateNotify(); // Critical UI state change
       }
       if (hightValue < 0) hightValue = 0;
       heightPosition = hightValue;
       lockScreenRecord = isLocked;
-      notifyListeners();
+      immediateNotify(); // Critical UI update during drag
 
       /// this operation for update X oriantation
       /// draggable to the left or right place
@@ -281,7 +316,7 @@ class SoundRecordNotifier extends ChangeNotifier {
         }
         // ignore: empty_catches
       } catch (e) {}
-      notifyListeners();
+      immediateNotify(); // Critical UI update during drag
     }
   }
 
@@ -308,19 +343,44 @@ class SoundRecordNotifier extends ChangeNotifier {
       minute = minute + 1;
     }
 
-    notifyListeners();
+    safeNotify();
     loopActive = false;
-    notifyListeners();
+    safeNotify();
   }
 
   /// this function to start record voice
   record(Function()? startRecord) async {
     if (!_isAcceptedPermission) {
-      await Permission.microphone.request();
-      await Permission.manageExternalStorage.request();
-      await Permission.storage.request();
-      _isAcceptedPermission = true;
-    } else {
+      try {
+        // Request all permissions at once to avoid concurrent requests
+        Map<Permission, PermissionStatus> statuses =
+            await [
+              Permission.microphone,
+              Permission.manageExternalStorage,
+              Permission.storage,
+            ].request();
+
+        // Check if all required permissions are granted
+        bool allGranted =
+            statuses[Permission.microphone]?.isGranted == true &&
+            (statuses[Permission.storage]?.isGranted == true ||
+                statuses[Permission.manageExternalStorage]?.isGranted == true);
+
+        if (allGranted) {
+          _isAcceptedPermission = true;
+        } else {
+          // Handle permission denial
+          print('Required permissions not granted');
+          return;
+        }
+      } catch (e) {
+        print('Error requesting permissions: $e');
+        return;
+      }
+    }
+
+    // Only proceed if permissions are granted
+    if (_isAcceptedPermission) {
       buttonPressed = true;
       String recordFilePath = await getFilePath();
       if (_timer != null) {
@@ -335,9 +395,9 @@ class SoundRecordNotifier extends ChangeNotifier {
       }
 
       _mapCounterGenerater();
-      notifyListeners();
+      immediateNotify(); // Critical UI update when recording starts
     }
-    notifyListeners();
+    safeNotify();
   }
 
   /// to check permission
@@ -345,12 +405,49 @@ class SoundRecordNotifier extends ChangeNotifier {
     // if (Platform.isIOS) _isAcceptedPermission = true;
 
     startRecord = false;
-    final status = await Permission.microphone.status;
-    if (status.isGranted) {
-      final result = await Permission.storage.request();
-      if (result.isGranted) {
+
+    try {
+      // Check current permission statuses first
+      final micStatus = await Permission.microphone.status;
+      final storageStatus = await Permission.storage.status;
+      final manageStorageStatus = await Permission.manageExternalStorage.status;
+
+      // If microphone and at least one storage permission is granted, we're good
+      if (micStatus.isGranted &&
+          (storageStatus.isGranted || manageStorageStatus.isGranted)) {
         _isAcceptedPermission = true;
+      } else {
+        // Only request permissions that aren't already granted
+        List<Permission> permissionsToRequest = [];
+
+        if (!micStatus.isGranted) {
+          permissionsToRequest.add(Permission.microphone);
+        }
+
+        if (!storageStatus.isGranted && !manageStorageStatus.isGranted) {
+          permissionsToRequest.add(Permission.storage);
+          permissionsToRequest.add(Permission.manageExternalStorage);
+        }
+
+        if (permissionsToRequest.isNotEmpty) {
+          final results = await permissionsToRequest.request();
+
+          // Check if we have the minimum required permissions
+          bool micGranted =
+              results[Permission.microphone]?.isGranted == true ||
+              micStatus.isGranted;
+          bool storageGranted =
+              results[Permission.storage]?.isGranted == true ||
+              results[Permission.manageExternalStorage]?.isGranted == true ||
+              storageStatus.isGranted ||
+              manageStorageStatus.isGranted;
+
+          _isAcceptedPermission = micGranted && storageGranted;
+        }
       }
+    } catch (e) {
+      print('Error checking/requesting permissions in voidInitialSound: $e');
+      _isAcceptedPermission = false;
     }
   }
 }

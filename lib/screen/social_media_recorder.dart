@@ -129,12 +129,12 @@ class _SocialMediaRecorder extends State<SocialMediaRecorder> {
     soundRecordNotifier.initialStorePathRecord =
         widget.storeSoundRecoringPath ?? "";
     soundRecordNotifier.isShow = false;
-    soundRecordNotifier.voidInitialSound();
     super.initState();
   }
 
   @override
   void dispose() {
+    soundRecordNotifier.dispose();
     super.dispose();
   }
 
